@@ -20,7 +20,7 @@
 //
 // This requires PubSubClient 2.7.
 
-#define HOME_ASSISTANT_DISCOVERY 1
+// #define HOME_ASSISTANT_DISCOVERY 1
 
 // If PUBLISH_CHIP_ID is defined, the Anavi Thermometer will publish
 // the chip ID using MQTT.  This can be considered a privacy issue,
