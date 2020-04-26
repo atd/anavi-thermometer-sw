@@ -861,17 +861,18 @@ void drawDisplay(const char *line1, const char *line2 = "", const char *line3 = 
     // Set appropriate font
     if ( true == smallSize)
     {
-      u8g2.setFont(u8g2_font_ncenR10_tr);
+      u8g2.setFont(u8g2_font_fur11_tr);
       u8g2.drawStr(0,14, line1);
       u8g2.drawStr(0,39, line2);
       u8g2.drawStr(0,60, line3);
     }
     else
     {
-      u8g2.setFont(u8g2_font_ncenR14_tr);
-      u8g2.drawStr(0,14, line1);
-      u8g2.drawStr(0,39, line2);
-      u8g2.drawStr(0,64, line3);
+      u8g2.setFont(u8g2_font_fur20_tf);
+      u8g2.drawUTF8(0,  32, line1);
+      u8g2.drawStr(70, 32, line2);
+      u8g2.setFont(u8g2_font_fur14_tr);
+      u8g2.drawStr(0, 64, line3);
     }
     // Transfer internal memory to the display
     u8g2.sendBuffer();
@@ -1567,7 +1568,7 @@ void do_ota_upgrade(char *text)
         Serial.print(":");
         Serial.print(port);
         Serial.println(file);
-        drawDisplay("Performing", "OTA upgrade.", "Stand by.");
+        drawDisplay("Performing", "OTA upgrade.", "Stand by.", true);
         ESPhttpUpdate.setLedPin(pinAlarm, HIGH);
         WiFiClient update_client;
         t_httpUpdate_return ret = ESPhttpUpdate.update(update_client,
@@ -1584,7 +1585,7 @@ void do_ota_upgrade(char *text)
 
         case HTTP_UPDATE_OK:
             Serial.println("HTTP_UPDATE_OK");
-            drawDisplay("OTA OK.", "Rebooting.", "");
+            drawDisplay("OTA OK.", "Rebooting.", "", true);
             nice_restart();
             break;
         }
@@ -2121,15 +2122,15 @@ float convertTemperature(float temperature)
 
 String formatTemperature(float temperature)
 {
-    String unit = (true == configTempCelsius) ? "°C" : "F";
+    String unit = (true == configTempCelsius) ? "°" : "F";
     return String(convertTemperature(temperature), 1) + unit;
 }
 
 void setDefaultSensorLines()
 {
-    sensor_line1 = "Air " + formatTemperature(dhtTemperature);
+    sensor_line1 = formatTemperature(dhtTemperature);
     Serial.println(sensor_line1);
-    sensor_line2 = "Humidity " + String(dhtHumidity, 0) + "%";
+    sensor_line2 = String(dhtHumidity, 0) + "%";
     Serial.println(sensor_line2);
     if (haveButton)
         displayButton();
