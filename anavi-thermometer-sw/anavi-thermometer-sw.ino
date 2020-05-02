@@ -352,7 +352,7 @@ float dhtHumidity = 0;
 float dsTemperature = 0;
 float sensorTemperature = 0;
 float sensorHumidity = 0;
-uint16_t sensorAmbientLight = 0;
+uint16_t sensorAmbientLight = 65535; // Force it to change if first value is 0
 float sensorBaPressure = 0;
 enum i2cSensorDetected { NONE = 0, BMP = 1, BH = 2, BOTH = 3 };
 i2cSensorDetected i2cSensorToShow = NONE;
@@ -1992,6 +1992,9 @@ void handleBH1750()
 
         // Publish new brightness value through MQTT
         publishSensorData(MQTT_BH1750, "light", "light", sensorAmbientLight);
+
+        // Update display brightness with new value
+        updateDisplayBrightness();
     }
 }
 
@@ -2220,6 +2223,43 @@ void displaySensorsDataI2C()
             break;
         }
     }
+}
+
+// https://forum.arduino.cc/index.php?topic=515370.0
+void setContrast(int value)
+{
+  u8x8_cad_StartTransfer(u8g2.getU8x8());
+  u8x8_cad_SendCmd( u8g2.getU8x8(), 0x81);
+  u8x8_cad_SendArg( u8g2.getU8x8(), value);  //max 157
+  u8x8_cad_EndTransfer(u8g2.getU8x8());
+}
+
+// With a value of 15 screen is off
+void setPrecharge(int value)
+{
+    u8x8_cad_StartTransfer(u8g2.getU8x8());
+    u8x8_cad_SendCmd( u8g2.getU8x8(), 0xD9);
+    u8x8_cad_SendArg( u8g2.getU8x8(), value);  //max 34
+    u8x8_cad_EndTransfer(u8g2.getU8x8());
+}
+
+void updateDisplayBrightness()
+{
+  if (sensorAmbientLight <= 20) {
+    int value = sensorAmbientLight * (34 - 15) / 20 + 15;
+
+    Serial.println("Brightness: contrast: 1, precharge: " + String(value));
+
+    setContrast(1);
+    setPrecharge(value);
+  } else {
+    int value = sensorAmbientLight > 300 ? 157 : sensorAmbientLight * 157 / 300;
+
+    Serial.println("Brightness: contrast: " + String(value) + " precharge: 34");
+
+    setContrast(value);
+    setPrecharge(34);
+  }
 }
 
 void loop()
