@@ -1,0 +1,11 @@
+SRC=anavi-thermometer-sw.ino.generic.bin
+DEST=update.bin
+SSH_HOST=$OTA_USER@$OTA_HOST
+
+# ssh $SSH_HOST 'cd anavi-thermometer && nohup python -m SimpleHTTPServer &'
+
+scp anavi-thermometer-sw/$SRC $SSH_HOST:anavi-thermometer/$DEST
+
+mosquitto_pub -h $MOSQUITTO_SERVER \
+   -t cmnd/$MACHINEID/update \
+   -m "{\"file\": \"/${DEST}\", \"server\": \"${OTA_HOST}\", \"port\": 8000 }"
