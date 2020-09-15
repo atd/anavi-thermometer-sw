@@ -376,6 +376,8 @@ char temp_scale[40] = "celsius";
 // true - Celsius, false - Fahrenheit
 bool configTempCelsius = true;
 
+#define TOPIC_CONTRAST "cmnd/anavi/contrast"
+#define TOPIC_PRECHARGE "cmnd/anavi/precharge"
 
 // MD5 of chip ID.  If you only have a handful of thermometers and use
 // your own MQTT broker (instead of iot.eclips.org) you may want to
@@ -703,6 +705,8 @@ void mqtt_esp8266_connected(MQTTConnection *c)
 #endif
     c->mqttClient.subscribe(cmnd_restart_topic);
     c->mqttClient.subscribe(cmnd_temp_format);
+    c->mqttClient.subscribe(TOPIC_CONTRAST);
+    c->mqttClient.subscribe(TOPIC_PRECHARGE);
     publishState();
 }
 
@@ -1679,6 +1683,16 @@ void mqttCallback(char* topic, byte* payload, unsigned int length)
         processMessageScale(text);
     }
 
+    if (strcmp(topic, TOPIC_CONTRAST) == 0)
+    {
+      setContrast(atoi(text));
+    }
+
+    if (strcmp(topic, TOPIC_PRECHARGE) == 0)
+    {
+      setPrecharge(atoi(text));
+    }
+    
 #ifdef OTA_UPGRADES
     if (strcmp(topic, cmnd_update_topic) == 0)
     {
