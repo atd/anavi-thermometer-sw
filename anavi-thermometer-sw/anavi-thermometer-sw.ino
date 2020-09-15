@@ -352,7 +352,7 @@ float dhtHumidity = 0;
 float dsTemperature = 0;
 float sensorTemperature = 0;
 float sensorHumidity = 0;
-uint16_t sensorAmbientLight = 0;
+uint16_t sensorAmbientLight = 65535; // Force it to change if first value is 0
 float sensorBaPressure = 0;
 enum i2cSensorDetected { NONE = 0, BMP = 1, BH = 2, BOTH = 3 };
 i2cSensorDetected i2cSensorToShow = NONE;
@@ -376,6 +376,8 @@ char temp_scale[40] = "celsius";
 // true - Celsius, false - Fahrenheit
 bool configTempCelsius = true;
 
+#define TOPIC_CONTRAST "cmnd/anavi/contrast"
+#define TOPIC_PRECHARGE "cmnd/anavi/precharge"
 
 // MD5 of chip ID.  If you only have a handful of thermometers and use
 // your own MQTT broker (instead of iot.eclips.org) you may want to
@@ -703,6 +705,8 @@ void mqtt_esp8266_connected(MQTTConnection *c)
 #endif
     c->mqttClient.subscribe(cmnd_restart_topic);
     c->mqttClient.subscribe(cmnd_temp_format);
+    c->mqttClient.subscribe(TOPIC_CONTRAST);
+    c->mqttClient.subscribe(TOPIC_PRECHARGE);
     publishState();
 }
 
@@ -1680,6 +1684,16 @@ void mqttCallback(char* topic, byte* payload, unsigned int length)
         processMessageScale(text);
     }
 
+    if (strcmp(topic, TOPIC_CONTRAST) == 0)
+    {
+      setContrast(atoi(text));
+    }
+
+    if (strcmp(topic, TOPIC_PRECHARGE) == 0)
+    {
+      setPrecharge(atoi(text));
+    }
+    
 #ifdef OTA_UPGRADES
     if (strcmp(topic, cmnd_update_topic) == 0)
     {
@@ -1993,6 +2007,9 @@ void handleBH1750()
 
         // Publish new brightness value through MQTT
         publishSensorData(MQTT_BH1750, "light", "light", sensorAmbientLight);
+
+        // Update display brightness with new value
+        updateDisplayBrightness();
     }
 }
 
@@ -2221,6 +2238,57 @@ void displaySensorsDataI2C()
             break;
         }
     }
+}
+
+// https://forum.arduino.cc/index.php?topic=515370.0
+void setContrast(int value)
+{
+  u8x8_cad_StartTransfer(u8g2.getU8x8());
+  u8x8_cad_SendCmd( u8g2.getU8x8(), 0x81);
+  u8x8_cad_SendArg( u8g2.getU8x8(), value);  //max 157
+  u8x8_cad_EndTransfer(u8g2.getU8x8());
+}
+
+/*
+ * With AZ Delivery OLED display, these are 3 values that cover the range
+ * 15 - hight
+ * 17 - medium
+ * 16 - low
+ */
+void setPrecharge(int value)
+{
+    u8x8_cad_StartTransfer(u8g2.getU8x8());
+    u8x8_cad_SendCmd( u8g2.getU8x8(), 0xD9);
+    u8x8_cad_SendArg( u8g2.getU8x8(), value);  //max 34
+    u8x8_cad_EndTransfer(u8g2.getU8x8());
+}
+
+void updateDisplayBrightness()
+{
+  if (sensorAmbientLight < 1) {
+    u8g2.setPowerSave(1);
+  } else {
+    u8g2.setPowerSave(0);
+
+    int precharge;
+    int contrast;
+
+    if (sensorAmbientLight <= 50) {
+      precharge = 16;
+      contrast = sensorAmbientLight * 255 / 50;        
+    } else if (sensorAmbientLight <= 200) {
+      precharge = 17;
+      contrast = (sensorAmbientLight - 50) * 255 / 150;
+    } else {
+      precharge = 15;
+      contrast = sensorAmbientLight > 300 ? 255 : (sensorAmbientLight - 200) * 255 / 100;
+    }
+
+    Serial.println("Brightness: precharge: " + String(precharge) + " contrast: " + String(contrast));
+    
+    setPrecharge(precharge);
+    setContrast(contrast);
+  }
 }
 
 void loop()
