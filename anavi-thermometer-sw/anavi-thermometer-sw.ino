@@ -2248,7 +2248,12 @@ void setContrast(int value)
   u8x8_cad_EndTransfer(u8g2.getU8x8());
 }
 
-// With a value of 15 screen is off
+/*
+ * With AZ Delivery OLED display, these are 3 values that cover the range
+ * 15 - hight
+ * 17 - medium
+ * 16 - low
+ */
 void setPrecharge(int value)
 {
     u8x8_cad_StartTransfer(u8g2.getU8x8());
@@ -2259,20 +2264,29 @@ void setPrecharge(int value)
 
 void updateDisplayBrightness()
 {
-  if (sensorAmbientLight <= 20) {
-    int value = sensorAmbientLight * (34 - 15) / 20 + 15;
-
-    Serial.println("Brightness: contrast: 1, precharge: " + String(value));
-
-    setContrast(1);
-    setPrecharge(value);
+  if (sensorAmbientLight < 1) {
+    u8g2.setPowerSave(1);
   } else {
-    int value = sensorAmbientLight > 300 ? 157 : sensorAmbientLight * 157 / 300;
+    u8g2.setPowerSave(0);
 
-    Serial.println("Brightness: contrast: " + String(value) + " precharge: 34");
+    int precharge;
+    int contrast;
 
-    setContrast(value);
-    setPrecharge(34);
+    if (sensorAmbientLight <= 50) {
+      precharge = 16;
+      contrast = sensorAmbientLight * 255 / 50;        
+    } else if (sensorAmbientLight <= 200) {
+      precharge = 17;
+      contrast = (sensorAmbientLight - 50) * 255 / 150;
+    } else {
+      precharge = 15;
+      contrast = sensorAmbientLight > 300 ? 255 : (sensorAmbientLight - 200) * 255 / 100;
+    }
+
+    Serial.println("Brightness: precharge: " + String(precharge) + " contrast: " + String(contrast));
+    
+    setPrecharge(precharge);
+    setContrast(contrast);
   }
 }
 
